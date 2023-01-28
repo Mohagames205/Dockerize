@@ -6,7 +6,6 @@ services:
       context: .
       dockerfile: Dockerfile
     image: digitalocean.com/php
-    container_name: app
     restart: unless-stopped
     tty: true
     environment:
@@ -22,25 +21,29 @@ services:
   #Nginx Service
   webserver:
     image: nginx:alpine
-    container_name: webserver
     restart: unless-stopped
     tty: true
-    ports:
-      - "9797:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dcal.entrypoints=web,websecure"
+      - "traefik.http.routers.dcal.rule=Host(`<subdomain>.mootje.be`)"
+      - "traefik.http.routers.dcal.tls=true"
+    # define the port to which traefik should redirect all the traffic (only needed when using multiple ports)
+    # - "traefik.http.services.voxum.loadbalancer.server.port=80"
     volumes:
       - ./:/var/www
       - ./.docker/nginx/conf.d/:/etc/nginx/conf.d/
     networks:
       - app-network
+      - traefik_default
 
   #MySQL Service
   db:
     image: mysql:5.7.22
-    container_name: db
     restart: unless-stopped
     tty: true
     ports:
-      - "69:3306"
+      - "3306"
     environment:
       MYSQL_DATABASE: elmo
       MYSQL_ROOT_PASSWORD: thepassword
@@ -56,6 +59,8 @@ services:
 networks:
   app-network:
     driver: bridge
+  traefik_default:
+    external: true
 #Volumes
 volumes:
   dbdata:
